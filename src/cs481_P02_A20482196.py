@@ -37,6 +37,7 @@ def main():
             continue
         
         class_label = row['review_type']
+        print(index)
 
         #print(type (row['review_content']))
         for word in row['review_content'].split():
@@ -65,7 +66,7 @@ def main():
                     negative_words_count[mword] += 1
                 else:
                     negative_words_count[mword] = 1
-            print(mword)
+            #print(mword)
         
     print(positive_words_count)
     print(negative_words_count)
