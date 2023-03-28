@@ -36,7 +36,7 @@ def main():
     
     #print(df.iloc[1000000].review_content)
     for index, row in df.iterrows():
-        if index == 100000:
+        if index == 500000:
             break
         #print(row['review_type'], row['review_content'])
         if type(row['review_content']) == float:
@@ -94,7 +94,7 @@ def main():
     false_negative = 0
 
 
-    for row in range(100001, 120000):
+    for row in range(500001, 600000):
         sentance = df.iloc[row].review_content
         label = df.iloc[row].review_type
 
