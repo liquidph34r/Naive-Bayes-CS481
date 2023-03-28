@@ -97,7 +97,7 @@ def main():
     for row in range(100001, 120000):
         sentance = df.iloc[row].review_content
         label = df.iloc[row].review_type
-        
+
         #print(total_positive_words)
         positive = 1
         negitive = 1
@@ -121,17 +121,17 @@ def main():
 
         if positive > negitive:
             if label == 'Fresh':
-                print("Correct")
+                #print("Correct")
                 true_positive += 1
             else:
-                print("Incorrect")
+                #print("Incorrect")
                 false_positive += 1
         else:
             if label == 'Rotten':
-                print("Correct")
+                #print("Correct")
                 true_negative += 1
             else:
-                print("Incorrect")
+                #print("Incorrect")
                 false_negative += 1
 
     print("True Positive: ", true_positive)
