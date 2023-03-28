@@ -34,19 +34,26 @@ def main():
     total_positive_words = 0
     total_negative_words = 0
     
-    #print(df.iloc[1000000].review_content)
+    # Building the model
     for index, row in df.iterrows():
+        # Manualy set the number of reviews to use for training
         if index == 500000:
             break
+
         #print(row['review_type'], row['review_content'])
+
+        # Check if the review is a float - IE Empty
         if type(row['review_content']) == float:
-            #print("CONTINUE")
             continue
         
+        # Get the class label
         class_label = row['review_type']
+
         #print(index)
 
         #print(type (row['review_content']))
+
+        # Iterate through each word in the review
         for word in row['review_content'].split():
             #print(word)
 
@@ -55,6 +62,7 @@ def main():
             mword = mword.strip(string.punctuation)
 
             # Step 2 - Remove stopwords
+            #TODO: Figure out how to speed up?
             #if mword in stop:
             #    continue
             
@@ -63,10 +71,12 @@ def main():
                 stemmer = PorterStemmer()
                 mword = stemmer.stem(word)
 
+            # Step 4 - Add to the dictionary
             if class_label == 'Fresh':
                 num_positive_reviews += 1
                 total_positive_words += 1
                 #print("increase pos")
+                # Check if the word is already in the dictionary
                 if mword in positive_words_count:
                     positive_words_count[mword] += 1
                 else:
@@ -79,46 +89,56 @@ def main():
                     negative_words_count[mword] += 1
                 else:
                     negative_words_count[mword] = 1
-            #print(mword)
-        
-    #print(positive_words_count)
-    #print(negative_words_count)
 
-    #print("starting sum")
 
-    print("finished sum")
+    print("Finished Training model")
 
     true_positive = 0
     false_positive = 0
     true_negative = 0
     false_negative = 0
 
-
+    # Testing the model
     for row in range(500001, 600000):
+        # Manualy set the number of reviews to use for testing
         sentance = df.iloc[row].review_content
         label = df.iloc[row].review_type
 
         #print(total_positive_words)
+
+        # initialize the probabilities
         positive = 1
         negitive = 1
 
+        # Check if the review is a float - IE Empty
         if type(sentance) == float:
             continue
 
+        # Iterate through each word in the review
         for word in sentance.split():
+
+            # Step 1 - Lowercase and remove punctuation
             mword = word.lower()
             mword = mword.strip(string.punctuation)
 
+            # Step 2 - Remove stopwords
+            #TODO: Enable this
+
+
+            # Step 3 - Stemming
             if enable_stemming:
                 stemmer = PorterStemmer()
                 mword = stemmer.stem(word)
 
+            # Step 4 - Calculate the probability of the word for each class
             positive *= (positive_words_count.get(mword, 1)/total_positive_words)
             negitive *= (negative_words_count.get(mword, 1)/total_negative_words)
 
+        # Step 5 - Calculate the probability of the class
         positive *= (num_positive_reviews/(num_positive_reviews + num_negative_reviews))
         negitive *= (num_negative_reviews/(num_positive_reviews + num_negative_reviews))
 
+        # Step 6 - Compare the probabilities and classify the review
         if positive > negitive:
             if label == 'Fresh':
                 #print("Correct")
@@ -134,6 +154,7 @@ def main():
                 #print("Incorrect")
                 false_negative += 1
 
+    # Step 7 - Calculate the accuracy and other metrics
     print("True Positive: ", true_positive)
     print("False Positive: ", false_positive)
     print("True Negative: ", true_negative)
