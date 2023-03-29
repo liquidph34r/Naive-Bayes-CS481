@@ -8,6 +8,7 @@ import sys
 #https://www.kaggle.com/datasets/stefanoleone992/rotten-tomatoes-movies-and-critic-reviews-dataset
 
 stop = stopwords.words('english')
+
 def main():
     #print("Hello World")
     #read in the csv file
