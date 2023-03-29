@@ -9,6 +9,8 @@ import sys
 
 stop = stopwords.words('english')
 
+temp = 0
+
 def main():
     #print("Hello World")
     #read in the csv file
