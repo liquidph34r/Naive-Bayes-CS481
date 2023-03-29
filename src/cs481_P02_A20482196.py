@@ -170,7 +170,6 @@ def main():
     print("Precision: ", true_positive/(true_positive + false_positive))
     print("negative predictive value: ", true_negative/(true_negative + false_negative))
     print("f-score: ", (2*true_positive)/((2*true_positive) + false_positive + false_negative))
-    #helo
 
 
 if __name__ == "__main__":
