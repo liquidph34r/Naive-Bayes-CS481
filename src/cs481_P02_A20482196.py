@@ -36,7 +36,7 @@ def main():
     userInput(enable_stemming)
 
 
-def train(enable_stemming):
+def train(stem):
     # Read in the data
     df = pd.read_csv("rotten_tomatoes_critic_reviews.csv", usecols = ['review_type', 'review_content'])
     # Split the data into training and testing
@@ -81,7 +81,7 @@ def train(enable_stemming):
                 continue
             
             # Step 3 - Stemming
-            if enable_stemming:
+            if stem:
                 word = PorterStemmer().stem(word)
 
             # Step 4 - Add to the dictionary
