@@ -10,7 +10,6 @@ import csv
 
 stop = stopwords.words('english')
 
-temp = 0
 
 def main():
     # get the command line arguments
@@ -192,6 +191,8 @@ def testModel(enable_stemming):
 
             # Step 2 - Remove stopwords
             #TODO: Enable this
+            #if mword in stop:
+            #    continue
 
 
             # Step 3 - Stemming
@@ -287,6 +288,8 @@ def classifyReview(review, enable_stemming):
         mword = mword.strip(string.punctuation)
 
         # Step 2 - Remove stopwords
+        #if mword in stop:
+            #    continue
 
         # Step 3 - Stemming
         if enable_stemming:
