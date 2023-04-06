@@ -10,7 +10,6 @@ import csv
 
 stop = stopwords.words('english')
 
-
 def main():
     # get the command line arguments
     enable_stemming = True
@@ -21,22 +20,28 @@ def main():
         print("Ignoring stemming")
 
     # decide if we want to train the model or not
-    val = input("Do you want to retrain the model? (Y/N): ")
-    if val == 'Y':
-        trainModel(enable_stemming)
+    train_val = input("Do you want to train the model? [y/n]: ")
+    train_val = train_val.lower()
+    if train_val == 'y' or train_val == 'yes':
+        train(enable_stemming)
 
     # decide if we want to test the model or not
-    val2 = input("Do you want to test the model?(WARNING!! MODEL MAY HAVE BEEN TRAINED WITH STEMMING ENABLED) (Y/N): ")
-    if val2 == 'Y':
-        testModel(enable_stemming)
+    print()
+    test_val = input("Do you want to test the model? [y/n]: ")
+    test_val = test_val.lower()
+    if test_val == 'y' or test_val == 'yes':
+        test(enable_stemming)
 
-    # decide if we want to test the model or not
+    # ask user if they want to enter a review to be classified
     userInput(enable_stemming)
 
-def trainModel(enable_stemming):
+
+def train(enable_stemming):
     # Read in the data
     df = pd.read_csv("rotten_tomatoes_critic_reviews.csv", usecols = ['review_type', 'review_content'])
-
+    # Split the data into training and testing
+    size = len(df.index) * 0.8
+    print("Training on 80% of the data")
 
     #create a naive bayes classifier to classify the reviews
     #create a bag of words model
@@ -47,66 +52,59 @@ def trainModel(enable_stemming):
     num_negative_reviews = 0
     total_positive_words = 0
     total_negative_words = 0
-
-    # Split the data into training and testing
-    size = len(df.index) * 0.8
-
-    print("Training model is being trained on 80% of the data")
     
     # Building the model
     for index, row in df.iterrows():
-        # Manualy set the number of reviews to use for training
+        # Checking if at upper bound so that training is on only 80% of the data
         if index >= size:
             break
 
-        # Check if the review is a float - IE Empty
-        # TODO Change to reflect jakecs comments
-        if type(row['review_content']) == float:
-            continue
-        
         # Get the class label
-        class_label = row['review_type']
+        label = row['review_type']
+
+        # Get the review content
+        review = row['review_content']
+
+        # Check if the review is a float - IE Empty
+        if type(review) == float:
+            continue
 
         # Iterate through each word in the review
-        for word in row['review_content'].split():
+        for w in review.split():
 
             # Step 1 - Lowercase and remove punctuation
-            mword = word.lower()
-            mword = mword.strip(string.punctuation)
+            word = w.lower()
+            word = word.strip(string.punctuation)
 
             # Step 2 - Remove stopwords
-            #TODO: Figure out how to speed up?
-            #if mword in stop:
-            #    continue
+            if word in stop:
+                continue
             
             # Step 3 - Stemming
             if enable_stemming:
-                stemmer = PorterStemmer()
-                mword = stemmer.stem(word)
+                word = PorterStemmer().stem(word)
 
             # Step 4 - Add to the dictionary
-            if class_label == 'Fresh':
+            if label == 'Fresh':
                 num_positive_reviews += 1
                 total_positive_words += 1
 
                 # Check if the word is already in the dictionary
-                if mword in positive_words_count:
-                    positive_words_count[mword] += 1
+                if word in positive_words_count:
+                    positive_words_count[word] += 1
                 else:
-                    positive_words_count[mword] = 1
+                    positive_words_count[word] = 1
             else:
                 num_negative_reviews += 1
                 total_negative_words += 1
 
                 # Check if the word is already in the dictionary
-                if mword in negative_words_count:
-                    negative_words_count[mword] += 1
+                if word in negative_words_count:
+                    negative_words_count[word] += 1
                 else:
-                    negative_words_count[mword] = 1
+                    negative_words_count[word] = 1
 
-
-
-    print("Finished Training model")
+    print("Training complete")
     print("Saving model to file")
 
     # Save the model to a file
@@ -124,37 +122,35 @@ def trainModel(enable_stemming):
     z.writerow([num_negative_reviews])
     z.writerow([total_negative_words])
 
-    print("Finished saving model to file")
+    print("Model saved to file")
     
-def testModel(enable_stemming):
+
+def test(stem):
     positive_words_count = {}
     negative_words_count = {}
-
 
     # Read in the model
     r = csv.reader(open("positive_words_count.csv", encoding="utf-8"))
     for row in r:
         if row == []:
             continue
-        k, v = row
-        positive_words_count[k] = int(v)
+        positive_words_count[row[0]] = int(row[1])
     
 
     s = csv.reader(open("negative_words_count.csv", encoding="utf-8"))
     for row in s:
         if row == []:
             continue
-        k, v = row
-        negative_words_count[k] = int(v)
+        negative_words_count[row[0]] = int(row[1])
 
     t = csv.reader(open("model_data.csv", encoding="utf-8"))
     mylist = list(t)
 
     # Get the model data
     num_positive_reviews = int(mylist[0][0])
-    total_positive_words = int(mylist[2][0])
-    num_negative_reviews = int(mylist[4][0])
-    total_negative_words = int(mylist[6][0])
+    total_positive_words = int(mylist[1][0])
+    num_negative_reviews = int(mylist[2][0])
+    total_negative_words = int(mylist[3][0])
 
     # Read in the data
     df = pd.read_csv("rotten_tomatoes_critic_reviews.csv", usecols = ['review_type', 'review_content'])
@@ -165,51 +161,47 @@ def testModel(enable_stemming):
     false_negative = 0
 
     print("Testing model on 20% of the data")
-    test_lower = len(df.index) * 0.8001
-    test_lower = int(test_lower)
-    test_upper = len(df.index) - 1
+    start = int(len(df.index) * 0.8001)
 
     # Testing the model
-    for row in range(test_lower, test_upper):
-        sentance = df.iloc[row].review_content
+    for row in range(start, len(df.index) - 1):
         label = df.iloc[row].review_type
-
-        # initialize the probabilities
-        positive = 1
-        negitive = 1
+        review = df.iloc[row].review_content
 
         # Check if the review is a float - IE Empty
-        if type(sentance) == float:
+        if type(review) == float:
             continue
 
+        # initialize the probabilities
+        positive_prob = 1
+        negative_prob = 1
+
         # Iterate through each word in the review
-        for word in sentance.split():
+        for w in review.split():
 
             # Step 1 - Lowercase and remove punctuation
-            mword = word.lower()
-            mword = mword.strip(string.punctuation)
+            word = w.lower()
+            word = word.strip(string.punctuation)
 
             # Step 2 - Remove stopwords
             #TODO: Enable this
-            #if mword in stop:
-            #    continue
+            if word in stop:
+                continue
 
 
             # Step 3 - Stemming
-            if enable_stemming:
-                stemmer = PorterStemmer()
-                mword = stemmer.stem(word)
+            if stem:
+                word = PorterStemmer().stem(word)
 
             # Step 4 - Calculate the probability of the word for each class
-            positive *= (positive_words_count.get(mword, 1)/total_positive_words)
-            negitive *= (negative_words_count.get(mword, 1)/total_negative_words)
+            positive_prob *= (positive_words_count.get(word, 1) + 1) / (total_positive_words + len(positive_words_count))
+            negative_prob *= (negative_words_count.get(word, 1) + 1) / (total_negative_words + len(negative_words_count))
 
         # Step 5 - Calculate the probability of the class
-        positive *= (num_positive_reviews/(num_positive_reviews + num_negative_reviews))
-        negitive *= (num_negative_reviews/(num_positive_reviews + num_negative_reviews))
-
+        positive_prob *= num_positive_reviews / (num_positive_reviews + num_negative_reviews)
+        negative_prob *= num_negative_reviews / (num_positive_reviews + num_negative_reviews)
         # Step 6 - Compare the probabilities and classify the review
-        if positive > negitive:
+        if positive_prob > negative_prob:
             if label == 'Fresh':
                 true_positive += 1
             else:
@@ -221,33 +213,43 @@ def testModel(enable_stemming):
                 false_negative += 1
 
     # Step 7 - Calculate the accuracy and other metrics
-    print("True Positive: ", true_positive)
-    print("False Positive: ", false_positive)
-    print("True Negative: ", true_negative)
-    print("False Negative: ", false_negative)
+    print("Number of true positives:", true_positive)
+    print("Number of true negatives:", true_negative)
+    print("Number of false positives:", false_positive)
+    print("Number of false negatives:", false_negative)
 
-    print("Accuracy: ", (true_positive + true_negative)/(true_positive + true_negative + false_positive + false_negative))
-    print("misclassification rate: ", (false_positive + false_negative)/(true_positive + true_negative + false_positive + false_negative))
-    print("Recall(sensitivity): ", true_positive/(true_positive + false_negative))
-    print("Specificity: ", true_negative/(true_negative + false_positive))
-    print("Precision: ", true_positive/(true_positive + false_positive))
-    print("negative predictive value: ", true_negative/(true_negative + false_negative))
-    print("f-score: ", (2*true_positive)/((2*true_positive) + false_positive + false_negative))
+    accuracy = (true_positive + true_negative) / (true_positive + true_negative + false_positive + false_negative)
+    precision = true_positive / (true_positive + false_positive)
+    recall = true_positive / (true_positive + false_negative)
+    f1_score = 2 * precision * recall / (precision + recall)
+    specificity = true_negative / (true_negative + false_positive)
+    npv = true_negative / (true_negative + false_negative)
+
+    print("Sensitivity (recall):", recall)
+    print("Specificity:", specificity)
+    print("Precision:", precision)
+    print("Negative predictive value:", npv)
+    print("Accuracy:", accuracy)
+    print("F1 Score:", f1_score)
+    print()
 
 
-def userInput(enable_stemming):
-    # Get user input
-    print("Enter a review to classify")
-    print("Enter 'q' to quit")
-
+def userInput(stem):
     # Loop until the user quits
     while True:
+        # Get user input
+        print("\nEnter your sentence: ")
+        print("Enter 'q' to quit")
         review = input()
         if review == 'q':
             break
-        classifyReview(review, enable_stemming)
+        print()
+        print("Sentence S: ")
+        print("'", review, "'")
+        classifyReview(review, stem)
 
-def classifyReview(review, enable_stemming):
+
+def classifyReview(review, stem):
     positive_words_count = {}
     negative_words_count = {}
     # Read in the data
@@ -256,15 +258,13 @@ def classifyReview(review, enable_stemming):
     for row in r:
         if row == []:
             continue
-        k, v = row
-        positive_words_count[k] = int(v)
+        positive_words_count[row[0]] = int(row[1])
     
     s = csv.reader(open("negative_words_count.csv", encoding="utf-8"))
     for row in s:
         if row == []:
             continue
-        k, v = row
-        negative_words_count[k] = int(v)
+        negative_words_count[row[0]] = int(row[1])
 
 
     # Get the model data
@@ -272,48 +272,46 @@ def classifyReview(review, enable_stemming):
     mylist = list(t)
 
     num_positive_reviews = int(mylist[0][0])
-    total_positive_words = int(mylist[2][0])
-    num_negative_reviews = int(mylist[4][0])
-    total_negative_words = int(mylist[6][0])
+    total_positive_words = int(mylist[1][0])
+    num_negative_reviews = int(mylist[2][0])
+    total_negative_words = int(mylist[3][0])
 
     # initialize the probabilities
-    positive = 1
-    negitive = 1
+    positive_prob = 1
+    negative_prob = 1
 
     # Iterate through each word in the review
-    for word in review.split():
+    for w in review.split():
 
         # Step 1 - Lowercase and remove punctuation
-        mword = word.lower()
-        mword = mword.strip(string.punctuation)
+        word = w.lower()
+        word = word.strip(string.punctuation)
 
         # Step 2 - Remove stopwords
-        #if mword in stop:
-            #    continue
+        if word in stop:
+                continue
 
         # Step 3 - Stemming
-        if enable_stemming:
-            stemmer = PorterStemmer()
-            mword = stemmer.stem(word)
+        if stem:
+            word = PorterStemmer().stem(word)
         
         # Step 4 - Calculate the probability of the word for each class
-        positive *= (positive_words_count.get(mword, 1)/total_positive_words)
-        negitive *= (negative_words_count.get(mword, 1)/total_negative_words)
-    
+        positive_prob *= (positive_words_count.get(word, 1) + 1) / (total_positive_words + len(positive_words_count))
+        negative_prob *= (negative_words_count.get(word, 1) + 1) / (total_negative_words + len(negative_words_count))
+
     # Step 5 - Calculate the probability of the class
-    positive *= (num_positive_reviews/(num_positive_reviews + num_negative_reviews))
-    negitive *= (num_negative_reviews/(num_positive_reviews + num_negative_reviews))
-
-    print("Positive: ", positive)
-    print("Negative: ", negitive)
-
+    positive_prob *= num_positive_reviews / (num_positive_reviews + num_negative_reviews)
+    negative_prob *= num_negative_reviews / (num_positive_reviews + num_negative_reviews)
 
     # Step 6 - Compare the probabilities and classify the review
-    if positive > negitive:
-        print("Classified as Fresh/Positive\n")
+    if positive_prob > negative_prob:
+        print("was classified as 'Fresh'\n")
         
     else:
-        print("Classified as Rotten/Negative\n")
+        print("was classified as 'Rotten'\n")
+
+    print("P('Fresh' | S) = ", positive_prob)
+    print("P('Rotten' | S) = ", negative_prob)
 
 
 if __name__ == "__main__":
