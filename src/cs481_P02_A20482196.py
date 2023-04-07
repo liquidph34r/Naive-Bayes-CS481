@@ -14,11 +14,11 @@ stop = stopwords.words('english')
 def main():
     # get the command line arguments
     enable_stemming = True
-    if len(sys.argv) != 1 and sys.argv[1] != 'YES':
-        print("Not ignoring stemming")
-    else:
+    if len(sys.argv) == 2 and sys.argv[1] == 'YES':
         enable_stemming = False
         print("Ignoring stemming")
+    else:
+        print("Not ignoring stemming")
 
     # decide if we want to train the model or not
     train_val = input("Do you want to train the model? [y/n]: ")
@@ -162,6 +162,7 @@ def test(stem):
     false_negative = 0
 
     print("Testing model on 20% of the data")
+    print()
     start = int(len(df.index) * 0.8001)
 
     # Testing the model
@@ -194,7 +195,7 @@ def test(stem):
             if stem:
                 word = PorterStemmer().stem(word)
 
-            # Step 4 - Calculate the probability of the word for each class
+            # Step 4 - Calculate the probability of the word for each class, with smoothing
             positive_prob *= (positive_words_count.get(word, 1) + 1) / (total_positive_words + len(positive_words_count))
             negative_prob *= (negative_words_count.get(word, 1) + 1) / (total_negative_words + len(negative_words_count))
 
@@ -222,7 +223,7 @@ def test(stem):
     accuracy = (true_positive + true_negative) / (true_positive + true_negative + false_positive + false_negative)
     precision = true_positive / (true_positive + false_positive)
     recall = true_positive / (true_positive + false_negative)
-    f1_score = 2 * precision * recall / (precision + recall)
+    f_score = 2 * precision * recall / (precision + recall)
     specificity = true_negative / (true_negative + false_positive)
     npv = true_negative / (true_negative + false_negative)
 
@@ -231,7 +232,7 @@ def test(stem):
     print("Precision:", precision)
     print("Negative predictive value:", npv)
     print("Accuracy:", accuracy)
-    print("F1 Score:", f1_score)
+    print("F-Score:", f_score)
     print()
 
 
@@ -296,7 +297,7 @@ def classifyReview(review, stem):
         if stem:
             word = PorterStemmer().stem(word)
         
-        # Step 4 - Calculate the probability of the word for each class
+        # Step 4 - Calculate the probability of the word for each class, with smoothing
         positive_prob *= (positive_words_count.get(word, 1) + 1) / (total_positive_words + len(positive_words_count))
         negative_prob *= (negative_words_count.get(word, 1) + 1) / (total_negative_words + len(negative_words_count))
 
