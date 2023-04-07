@@ -7,6 +7,7 @@ import csv
 #Nelida Schalich-Ayllon, Andrew Rose
 #Rotten Tomatoes Critic Reviews
 #https://www.kaggle.com/datasets/stefanoleone992/rotten-tomatoes-movies-and-critic-reviews-dataset
+#PLACE DATASET IN /SRC
 
 stop = stopwords.words('english')
 
