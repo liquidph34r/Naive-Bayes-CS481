@@ -66,6 +66,9 @@ def train(stem):
         # Checking if at upper bound so that training is on only 80% of the data
         if index >= size:
             break
+        
+        if index % 1000 == 0:
+            print("Training on review " + str(index))
 
         # Get the class label
         label = row['review_type']
@@ -85,8 +88,8 @@ def train(stem):
             word = word.strip(string.punctuation)
 
             # Step 2 - Remove stopwords
-            #if word in stop:
-            #    continue
+            if word in stop:
+                continue
             
             # Step 3 - Stemming
             if stem:
@@ -196,8 +199,8 @@ def test(stem, threshold = 0.5):
 
             # Step 2 - Remove stopwords
             #TODO: Enable this
-            #if word in stop:
-            #    continue
+            if word in stop:
+                continue
 
 
             # Step 3 - Stemming
@@ -315,8 +318,8 @@ def classifyReview(review, stem):
         word = word.strip(string.punctuation)
 
         # Step 2 - Remove stopwords
-        #if word in stop:
-        #        continue
+        if word in stop:
+            continue
 
         # Step 3 - Stemming
         if stem:
@@ -426,8 +429,8 @@ def roctest(stem):
 
             # Step 2 - Remove stopwords
             #TODO: Enable this
-            #if word in stop:
-            #    continue
+            if word in stop:
+                continue
 
 
             # Step 3 - Stemming
