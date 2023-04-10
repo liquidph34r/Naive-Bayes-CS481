@@ -4,6 +4,8 @@ from nltk.stem import PorterStemmer
 import string
 import sys
 import csv
+import matplotlib.pyplot as mp
+import numpy as np
 #Nelida Schalich-Ayllon, Andrew Rose
 #Rotten Tomatoes Critic Reviews
 #https://www.kaggle.com/datasets/stefanoleone992/rotten-tomatoes-movies-and-critic-reviews-dataset
@@ -13,6 +15,7 @@ stop = stopwords.words('english')
 
 def main():
     # get the command line arguments
+    mp.plot(1,2)
     enable_stemming = True
     if len(sys.argv) == 2 and sys.argv[1] == 'YES':
         enable_stemming = False
@@ -35,6 +38,10 @@ def main():
 
     # ask user if they want to enter a review to be classified
     userInput(enable_stemming)
+
+    print("Do you want to test model ROC Cruve? [y/n]: ")
+    if input() == 'y':
+        rocCalc(enable_stemming)
 
 
 def train(stem):
@@ -78,8 +85,8 @@ def train(stem):
             word = word.strip(string.punctuation)
 
             # Step 2 - Remove stopwords
-            if word in stop:
-                continue
+            #if word in stop:
+            #    continue
             
             # Step 3 - Stemming
             if stem:
@@ -126,7 +133,7 @@ def train(stem):
     print("Model saved to file")
     
 
-def test(stem):
+def test(stem, threshold = 0.5):
     positive_words_count = {}
     negative_words_count = {}
 
@@ -149,9 +156,9 @@ def test(stem):
 
     # Get the model data
     num_positive_reviews = int(mylist[0][0])
-    total_positive_words = int(mylist[1][0])
-    num_negative_reviews = int(mylist[2][0])
-    total_negative_words = int(mylist[3][0])
+    total_positive_words = int(mylist[2][0])
+    num_negative_reviews = int(mylist[4][0])
+    total_negative_words = int(mylist[6][0])
 
     # Read in the data
     df = pd.read_csv("rotten_tomatoes_critic_reviews.csv", usecols = ['review_type', 'review_content'])
@@ -165,6 +172,8 @@ def test(stem):
     print()
     start = int(len(df.index) * 0.8001)
 
+    maxval = 0
+    minval = 1
     # Testing the model
     for row in range(start, len(df.index) - 1):
         label = df.iloc[row].review_type
@@ -187,8 +196,8 @@ def test(stem):
 
             # Step 2 - Remove stopwords
             #TODO: Enable this
-            if word in stop:
-                continue
+            #if word in stop:
+            #    continue
 
 
             # Step 3 - Stemming
@@ -203,7 +212,13 @@ def test(stem):
         positive_prob *= num_positive_reviews / (num_positive_reviews + num_negative_reviews)
         negative_prob *= num_negative_reviews / (num_positive_reviews + num_negative_reviews)
         # Step 6 - Compare the probabilities and classify the review
-        if positive_prob > negative_prob:
+
+        if positive_prob > maxval:
+            maxval = positive_prob
+        if positive_prob < minval:
+            minval = positive_prob
+        
+        if positive_prob/(positive_prob+negative_prob) >= threshold :
             if label == 'Fresh':
                 true_positive += 1
             else:
@@ -214,11 +229,19 @@ def test(stem):
             else:
                 false_negative += 1
 
+    print("Max value:", maxval)
+    print("Min value:", minval)
+
     # Step 7 - Calculate the accuracy and other metrics
     print("Number of true positives:", true_positive)
     print("Number of true negatives:", true_negative)
     print("Number of false positives:", false_positive)
     print("Number of false negatives:", false_negative)
+
+    true_positive += 1
+    true_negative += 1
+    false_positive += 1
+    false_negative += 1
 
     accuracy = (true_positive + true_negative) / (true_positive + true_negative + false_positive + false_negative)
     precision = true_positive / (true_positive + false_positive)
@@ -234,6 +257,8 @@ def test(stem):
     print("Accuracy:", accuracy)
     print("F-Score:", f_score)
     print()
+
+    return (1-specificity, recall)
 
 
 def userInput(stem):
@@ -290,8 +315,8 @@ def classifyReview(review, stem):
         word = word.strip(string.punctuation)
 
         # Step 2 - Remove stopwords
-        if word in stop:
-                continue
+        #if word in stop:
+        #        continue
 
         # Step 3 - Stemming
         if stem:
@@ -314,6 +339,144 @@ def classifyReview(review, stem):
 
     print("P('Fresh' | S) = ", positive_prob)
     print("P('Rotten' | S) = ", negative_prob)
+
+
+
+def rocCalc(stem):
+    xPoints = []
+    yPoints = []
+ 
+    xPoints, yPoints = roctest(stem)
+    
+    print("X points:", xPoints)
+    print("Y points:", yPoints)
+
+    mp.xlim(0, 1.1)
+    mp.ylim(0, 1.1)
+    mp.ylabel('True Positive Rate')
+    mp.xlabel('False Positive Rate')
+    mp.title('ROC Curve')
+    mp.plot(xPoints, yPoints , 'o')
+
+    mp.show()
+    
+
+def roctest(stem):
+    positive_words_count = {}
+    negative_words_count = {}
+    xvals = []
+    yvals = []
+
+    # Read in the model
+    r = csv.reader(open("positive_words_count.csv", encoding="utf-8"))
+    for row in r:
+        if row == []:
+            continue
+        positive_words_count[row[0]] = int(row[1])
+    
+
+    s = csv.reader(open("negative_words_count.csv", encoding="utf-8"))
+    for row in s:
+        if row == []:
+            continue
+        negative_words_count[row[0]] = int(row[1])
+
+    t = csv.reader(open("model_data.csv", encoding="utf-8"))
+    mylist = list(t)
+
+    # Get the model data
+    num_positive_reviews = int(mylist[0][0])
+    total_positive_words = int(mylist[2][0])
+    num_negative_reviews = int(mylist[4][0])
+    total_negative_words = int(mylist[6][0])
+
+    # Read in the data
+    df = pd.read_csv("rotten_tomatoes_critic_reviews.csv", usecols = ['review_type', 'review_content'])
+
+    true_positive = [0] * 100
+    false_positive = [0] * 100
+    true_negative = [0] * 100
+    false_negative = [0] * 100
+
+    print("Testing model on 20% of the data")
+    print()
+    start = int(len(df.index) * 0.8001)
+
+    maxval = 0
+    minval = 1
+    # Testing the model
+    for row in range(start, len(df.index) - 1):
+        label = df.iloc[row].review_type
+        review = df.iloc[row].review_content
+
+        # Check if the review is a float - IE Empty
+        if type(review) == float:
+            continue
+
+        # initialize the probabilities
+        positive_prob = 1
+        negative_prob = 1
+
+        # Iterate through each word in the review
+        for w in review.split():
+
+            # Step 1 - Lowercase and remove punctuation
+            word = w.lower()
+            word = word.strip(string.punctuation)
+
+            # Step 2 - Remove stopwords
+            #TODO: Enable this
+            #if word in stop:
+            #    continue
+
+
+            # Step 3 - Stemming
+            if stem:
+                word = PorterStemmer().stem(word)
+
+            # Step 4 - Calculate the probability of the word for each class, with smoothing
+            positive_prob *= (positive_words_count.get(word, 1) + 1) / (total_positive_words + len(positive_words_count))
+            negative_prob *= (negative_words_count.get(word, 1) + 1) / (total_negative_words + len(negative_words_count))
+
+        # Step 5 - Calculate the probability of the class
+        positive_prob *= num_positive_reviews / (num_positive_reviews + num_negative_reviews)
+        negative_prob *= num_negative_reviews / (num_positive_reviews + num_negative_reviews)
+        # Step 6 - Compare the probabilities and classify the review
+        
+        for threshold in np.arange(0, 1, .01):
+            if positive_prob/(positive_prob+negative_prob) >= threshold :
+                if label == 'Fresh':
+                    true_positive[int(threshold*100)] += 1
+                else:
+                    false_positive[int(threshold*100)] += 1
+            else:
+                if label == 'Rotten':
+                    true_negative[int(threshold*100)] += 1
+                else:
+                    false_negative[int(threshold*100)] += 1
+            #print("Threshold:", int(threshold*100))
+
+            #print("Max value:", maxval)
+            #print("Min value:", minval)
+
+            # Step 7 - Calculate the accuracy and other metrics
+            #print("Number of true positives:", true_positive)
+            #print("Number of true negatives:", true_negative)
+            #print("Number of false positives:", false_positive)
+            #print("Number of false negatives:", false_negative)
+        
+
+
+    for i, v in enumerate(true_positive):
+        recall = true_positive[i] / (true_positive[i] + false_negative[i]+1)
+        yvals.append(recall)
+
+        specificity = true_negative[i] / (true_negative[i] + false_positive[i]+1)
+        xvals.append(1-specificity)
+
+
+    return (xvals, yvals)
+
 
 
 if __name__ == "__main__":
