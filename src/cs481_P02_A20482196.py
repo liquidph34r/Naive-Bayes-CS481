@@ -15,7 +15,6 @@ stop = stopwords.words('english')
 
 def main():
     # get the command line arguments
-    mp.plot(1,2)
     enable_stemming = True
     if len(sys.argv) == 2 and sys.argv[1] == 'YES':
         enable_stemming = False
@@ -359,7 +358,15 @@ def rocCalc(stem):
     mp.ylabel('True Positive Rate')
     mp.xlabel('False Positive Rate')
     mp.title('ROC Curve')
-    mp.plot(xPoints, yPoints , 'o')
+    mp.plot(xPoints, yPoints , 'o', color = 'black')
+
+    xzPoints = []
+    yzPoints = []
+
+    train(not stem)
+
+    xzPoints, yzPoints = roctest(not stem)
+    mp.plot(xzPoints, yzPoints , 'o', color = 'red')
 
     mp.show()
     
